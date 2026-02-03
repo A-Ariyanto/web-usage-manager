@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FocusFlow</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">🎯 <span class="logo-text">FocusFlow</span></div>
+    </header>
+
+    <!-- Tab Navigation -->
+    <nav class="tab-nav">
+      <button class="tab-button active" data-tab="timer">
+        <span class="tab-icon">⏱️</span>
+        <span>Timer</span>
+      </button>
+      <button class="tab-button" data-tab="blocker">
+        <span class="tab-icon">🚫</span>
+        <span>Blocker</span>
+      </button>
+      <button class="tab-button" data-tab="stats">
+        <span class="tab-icon">📊</span>
+        <span>Stats</span>
+      </button>
+    </nav>
+
+    <!-- Tab Content -->
+    <main class="content">
+      
+      <!-- Timer Tab -->
+      <div id="timer-tab" class="tab-content active">
+        <div class="timer-container">
+          <div class="timer-display">
+            <svg class="timer-ring" width="180" height="180">
+              <circle class="timer-ring-bg" cx="90" cy="90" r="75"></circle>
+              <circle id="timer-progress" class="timer-ring-progress" cx="90" cy="90" r="75"></circle>
+            </svg>
+            <div class="timer-text">
+              <div id="timer-value" class="timer-value">25:00</div>
+              <div id="timer-label" class="timer-label">WORK</div>
+            </div>
+          </div>
+          <div class="timer-controls">
+            <button id="start-btn" class="btn btn-primary">Start</button>
+            <button id="pause-btn" class="btn btn-secondary" disabled>Pause</button>
+            <button id="reset-btn" class="btn btn-icon">↻</button>
+          </div>
+        </div>
+        <div class="timer-info">
+          <h3>Pomodoro Timer</h3>
+          <p class="info-text">Work: 25 minutes | Break: 5 minutes</p>
+          <div class="deep-work-toggle">
+            <label class="toggle-container">
+              <input type="checkbox" id="deep-work-toggle">
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">Deep Work Mode</span>
+            </label>
+            <p class="toggle-hint">Locks blocklist during active session</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Blocker Tab -->
+      <div id="blocker-tab" class="tab-content">
+        <div class="blocker-controls">
+          <div class="blocking-toggle">
+            <label class="toggle-container toggle-large">
+              <input type="checkbox" id="blocking-enabled" checked>
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">Blocking Enabled</span>
+            </label>
+            <p class="toggle-hint">Turn off to disable all website blocking</p>
+          </div>
+          <div class="url-input-group">
+            <input type="text" id="url-input" placeholder="Enter URL (e.g., youtube.com)" class="input-field">
+            <button id="add-url-btn" class="btn btn-primary">Add Site</button>
+          </div>
+        </div>
+        <div class="blocklist-section">
+          <h3>Blocked Websites</h3>
+          <div id="blocklist" class="blocklist">
+            <div id="empty-blocklist" class="empty-state">
+              <div class="empty-icon">🌐</div>
+              <p>No blocked sites yet</p>
+              <small>Add a URL above to get started</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats Tab -->
+      <div id="stats-tab" class="tab-content">
+        <div class="stats-chart">
+          <canvas id="donut-chart"></canvas>
+        </div>
+        <div class="stats-breakdown">
+          <h3>Time Breakdown</h3>
+          <div id="stats-list" class="stats-list">
+            <div id="empty-stats" class="empty-state">
+              <div class="empty-icon">📈</div>
+              <p>No usage data yet</p>
+              <small>Start browsing to see stats</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

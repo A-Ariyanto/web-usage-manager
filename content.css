@@ -1,0 +1,88 @@
+/* Content Script Overlay Styles */
+
+.focusflow-block-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: focusflow-fadeIn 0.3s ease;
+}
+
+.focusflow-block-content {
+  text-align: center;
+  color: white;
+  max-width: 600px;
+  padding: 3rem;
+  animation: focusflow-slideUp 0.5s ease;
+}
+
+.focusflow-block-icon {
+  font-size: 5rem;
+  margin-bottom: 1.5rem;
+  animation: focusflow-bounce 2s infinite;
+}
+
+.focusflow-block-title {
+  font-size: 3rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.focusflow-block-message {
+  font-size: 1.25rem;
+  margin-bottom: 2rem;
+  opacity: 0.95;
+  line-height: 1.6;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.focusflow-block-quote {
+  font-size: 1rem;
+  font-style: italic;
+  opacity: 0.8;
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 1rem;
+  backdrop-filter: blur(10px);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* Animations */
+@keyframes focusflow-fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes focusflow-slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes focusflow-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
