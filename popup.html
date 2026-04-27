@@ -1,11 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<parameter name="head">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>FocusFlow</title>
   <link rel="stylesheet" href="style.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
   <div class="container">
@@ -46,15 +45,44 @@
               <div id="timer-label" class="timer-label">WORK</div>
             </div>
           </div>
-          <div class="timer-controls">
+          <div class="timer-controls" id="timer-controls">
             <button id="start-btn" class="btn btn-primary">Start</button>
             <button id="pause-btn" class="btn btn-secondary" disabled>Pause</button>
             <button id="reset-btn" class="btn btn-icon">↻</button>
           </div>
+          <!-- Manual transition buttons -->
+          <div class="timer-controls" id="pending-controls" style="display: none;">
+            <button id="start-break-btn" class="btn btn-primary btn-large" style="display: none;">
+              🧘 Start Break
+            </button>
+            <button id="start-work-btn" class="btn btn-primary btn-large" style="display: none;">
+              💪 Start Focus Session
+            </button>
+            <button id="reset-btn-2" class="btn btn-icon">↻</button>
+          </div>
+          
+          <!-- Duration Picker -->
+          <div class="duration-picker">
+            <label class="duration-label">Timer Duration</label>
+            <div class="duration-buttons">
+              <button class="duration-btn active" data-duration="25">25 min</button>
+              <button class="duration-btn" data-duration="15">15 min</button>
+              <button class="duration-btn" data-duration="5">5 min</button>
+              <div class="custom-duration">
+                <input type="number" id="custom-duration-input" min="1" max="120" placeholder="Custom" class="custom-duration-input">
+                <span class="duration-unit">min</span>
+              </div>
+            </div>
+          </div>
         </div>
+        
         <div class="timer-info">
           <h3>Pomodoro Timer</h3>
           <p class="info-text">Work: 25 minutes | Break: 5 minutes</p>
+          <div id="completion-message" class="completion-message" style="display: none;">
+            <div class="completion-icon">🎉</div>
+            <p id="completion-text">Session complete!</p>
+          </div>
           <div class="deep-work-toggle">
             <label class="toggle-container">
               <input type="checkbox" id="deep-work-toggle">
@@ -63,6 +91,23 @@
             </label>
             <p class="toggle-hint">Locks blocklist during active session</p>
           </div>
+        </div>
+        
+        <!-- Task Manager Section - Placed below for scrolling -->
+        <div class="task-manager">
+          <h3>🎯 Current Sprint</h3>
+          <div id="active-task-display" class="active-task">
+            <span id="task-name" class="task-name">No task selected</span>
+            <span id="task-progress" class="task-progress">0/0</span>
+          </div>
+          
+          <div class="task-input-group">
+            <input type="text" id="task-name-input" placeholder="Task name (e.g., Math Homework)" class="input-field task-input">
+            <input type="number" id="task-goal-input" placeholder="Goal" min="1" value="10" class="input-field task-goal-input">
+            <button id="add-task-btn" class="btn btn-primary btn-small">+ Add</button>
+          </div>
+          
+          <div id="task-list" class="task-list"></div>
         </div>
       </div>
 
@@ -97,7 +142,19 @@
       <!-- Stats Tab -->
       <div id="stats-tab" class="tab-content">
         <div class="stats-chart">
-          <canvas id="donut-chart"></canvas>
+          <!-- SVG Donut Chart -->
+          <svg id="donut-chart" width="280" height="280" viewBox="0 0 280 280">
+            <g id="donut-segments"></g>
+            <text id="total-time-value" x="140" y="130" text-anchor="middle" class="chart-total">0h 0m</text>
+            <text id="total-time-label" x="140" y="155" text-anchor="middle" class="chart-label">Total Time</text>
+          </svg>
+          <!-- Permission prompt -->
+          <div id="permission-prompt" class="permission-prompt" style="display: none;">
+            <div class="prompt-icon">🔒</div>
+            <h3>Permissions Required</h3>
+            <p>Grant access to track your browsing time</p>
+            <button id="grant-permissions-btn" class="btn btn-primary">Grant Permissions</button>
+          </div>
         </div>
         <div class="stats-breakdown">
           <h3>Time Breakdown</h3>

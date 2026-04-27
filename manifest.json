@@ -1,26 +1,30 @@
 {
   "manifest_version": 3,
   "name": "FocusFlow - Productivity & Focus",
-  "version": "2.0.0",
-  "description": "Horizontal layout productivity tool with Pomodoro timer, website blocker, and usage stats with donut chart visualization",
-  
+  "version": "3.0.0",
+  "description": "Pomodoro timer with real-time cross-device sync via Firebase",
+
   "permissions": [
     "storage",
     "tabs",
     "activeTab",
     "scripting",
-    "notifications"
+    "notifications",
+    "alarms",
+    "idle"
   ],
-  
-  "host_permissions": [
-    "<all_urls>"
-  ],
-  
+
+  "optional_host_permissions": ["<all_urls>"],
+
   "background": {
     "service_worker": "background.js",
     "type": "module"
   },
-  
+
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com"
+  },
+
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
@@ -29,19 +33,26 @@
       "128": "icons/icon128.png"
     }
   },
-  
+
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  
+
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
       "js": ["content.js"],
       "css": ["content.css"],
       "run_at": "document_start"
+    }
+  ],
+
+  "web_accessible_resources": [
+    {
+      "resources": ["ring.mp3"],
+      "matches": ["<all_urls>"]
     }
   ]
 }
