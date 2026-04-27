@@ -1,14 +1,23 @@
-// Popup Controller for FocusFlow
+// Popup Controller for FocusFlow v2.1
 const WORK_DURATION = 25 * 60;
 const BREAK_DURATION = 5 * 60;
 
-// DOM Elements
+// DOM Elements - Timer
 const timerValue = document.getElementById('timer-value');
 const timerLabel = document.getElementById('timer-label');
 const timerProgress = document.getElementById('timer-progress');
 const startBtn = document.getElementById('start-btn');
 const pauseBtn = document.getElementById('pause-btn');
 const resetBtn = document.getElementById('reset-btn');
+const resetBtn2 = document.getElementById('reset-btn-2');
+const timerControls = document.getElementById('timer-controls');
+const pendingControls = document.getElementById('pending-controls');
+const startBreakBtn = document.getElementById('start-break-btn');
+const startWorkBtn = document.getElementById('start-work-btn');
+const completionMessage = document.getElementById('completion-message');
+const completionText = document.getElementById('completion-text');
+
+// DOM Elements - Other
 const deepWorkToggle = document.getElementById('deep-work-toggle');
 const blockingEnabled = document.getElementById('blocking-enabled');
 const urlInput = document.getElementById('url-input');
@@ -17,13 +26,15 @@ const blocklist = document.getElementById('blocklist');
 const emptyBlocklist = document.getElementById('empty-blocklist');
 const statsList = document.getElementById('stats-list');
 const emptyStats = document.getElementById('empty-stats');
+const permissionPrompt = document.getElementById('permission-prompt');
+const grantPermissionsBtn = document.getElementById('grant-permissions-btn');
 
 // State
 let timerState = null;
 let blocklistData = [];
 let deepWorkMode = false;
 let blockingEnabledState = true;
-let donutChart = null;
+let hasPermissions = false;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
@@ -33,6 +44,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderBlocklist();
   renderStats();
   updateTimerUI();
+  checkPermissions();
 });
 
 // Load state from storage
@@ -48,7 +60,9 @@ async function loadState() {
     isRunning: false,
     isPaused: false,
     remainingTime: WORK_DURATION,
-    mode: 'work'
+    mode: 'work',
+    pendingBreak: false,
+    pendingWork: false
   };
   
   blocklistData = result.blocklist || [];
@@ -59,14 +73,36 @@ async function loadState() {
   blockingEnabled.checked = blockingEnabledState;
 }
 
+// Check permissions
+async function checkPermissions() {
+  const response = await chrome.runtime.sendMessage({ type: 'CHECK_PERMISSIONS' });
+  hasPermissions = response?.hasPermissions || false;
+  updatePermissionUI();
+}
+
+function updatePermissionUI() {
+  if (!hasPermissions) {
+    permissionPrompt.style.display = 'flex';
+    document.getElementById('donut-chart').style.display = 'none';
+  } else {
+    permissionPrompt.style.display = 'none';
+    document.getElementById('donut-chart').style.display = 'block';
+  }
+}
+
 // Setup event listeners
 function setupEventListeners() {
   startBtn.addEventListener('click', startTimer);
   pauseBtn.addEventListener('click', pauseTimer);
   resetBtn.addEventListener('click', resetTimer);
+  resetBtn2.addEventListener('click', resetTimer);
+  startBreakBtn.addEventListener('click', startBreak);
+  startWorkBtn.addEventListener('click', startWork);
   deepWorkToggle.addEventListener('change', toggleDeepWorkMode);
   blockingEnabled.addEventListener('change', toggleBlocking);
   addUrlBtn.addEventListener('click', addUrl);
+  grantPermissionsBtn.addEventListener('click', requestPermissions);
+  
   urlInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') addUrl();
   });
@@ -77,9 +113,34 @@ function setupEventListeners() {
       timerState = message.state;
       updateTimerUI();
     } else if (message.type === 'STATS_UPDATE') {
+      // Re-render stats in real-time when background saves tracking data
       renderStats();
+    } else if (message.type === 'PERMISSIONS_STATUS') {
+      hasPermissions = message.hasPermissions;
+      updatePermissionUI();
+      if (hasPermissions) {
+        renderStats();
+      }
     }
   });
+  
+  // Auto-refresh stats every 5 seconds while popup is open (smart batching handles real-time)
+  setInterval(() => {
+    const activeTab = document.querySelector('.tab-button.active');
+    if (activeTab && activeTab.getAttribute('data-tab') === 'stats') {
+      renderStats();
+    }
+  }, 5000);
+}
+
+// Permission request
+async function requestPermissions() {
+  const response = await chrome.runtime.sendMessage({ type: 'REQUEST_PERMISSIONS' });
+  if (response?.granted) {
+    hasPermissions = true;
+    updatePermissionUI();
+    renderStats();
+  }
 }
 
 // Tab switching
@@ -111,23 +172,25 @@ function switchTab(tabName) {
   }
 }
 
-// Timer functions
+// Timer functions - MANUAL mode
 async function startTimer() {
   chrome.runtime.sendMessage({ type: 'START_TIMER' });
-  startBtn.disabled = true;
-  pauseBtn.disabled = false;
+}
+
+async function startBreak() {
+  chrome.runtime.sendMessage({ type: 'START_BREAK' });
+}
+
+async function startWork() {
+  chrome.runtime.sendMessage({ type: 'START_WORK' });
 }
 
 async function pauseTimer() {
   chrome.runtime.sendMessage({ type: 'PAUSE_TIMER' });
-  startBtn.disabled = false;
-  pauseBtn.disabled = true;
 }
 
 async function resetTimer() {
   chrome.runtime.sendMessage({ type: 'RESET_TIMER' });
-  startBtn.disabled = false;
-  pauseBtn.disabled = true;
 }
 
 function updateTimerUI() {
@@ -149,13 +212,36 @@ function updateTimerUI() {
   const offset = circumference * (1 - progress);
   timerProgress.style.strokeDashoffset = offset;
   
-  // Update button states
-  if (timerState.isRunning && !timerState.isPaused) {
-    startBtn.disabled = true;
-    pauseBtn.disabled = false;
+  // Update buttons based on state
+  if (timerState.pendingBreak) {
+    // Show "Start Break" button
+    timerControls.style.display = 'none';
+    pendingControls.style.display = 'flex';
+    startBreakBtn.style.display = 'block';
+    startWorkBtn.style.display = 'none';
+    completionMessage.style.display = 'block';
+    completionText.textContent = 'Work session complete! Take a break 🧘';
+  } else if (timerState.pendingWork) {
+    // Show "Start Focus Session" button
+    timerControls.style.display = 'none';
+    pendingControls.style.display = 'flex';
+    startBreakBtn.style.display = 'none';
+    startWorkBtn.style.display = 'block';
+    completionMessage.style.display = 'block';
+    completionText.textContent = 'Break complete! Ready to focus 💪';
   } else {
-    startBtn.disabled = false;
-    pauseBtn.disabled = true;
+    // Normal controls
+    timerControls.style.display = 'flex';
+    pendingControls.style.display = 'none';
+    completionMessage.style.display = 'none';
+    
+    if (timerState.isRunning && !timerState.isPaused) {
+      startBtn.disabled = true;
+      pauseBtn.disabled = false;
+    } else {
+      startBtn.disabled = false;
+      pauseBtn.disabled = true;
+    }
   }
 }
 
@@ -253,10 +339,17 @@ function renderBlocklist() {
   });
 }
 
-// Stats functions
+// Stats functions with SVG donut chart
 async function renderStats() {
-  const result = await chrome.storage.local.get(['usageStats']);
+  if (!hasPermissions) {
+    statsList.innerHTML = '';
+    statsList.appendChild(emptyStats);
+    return;
+  }
+  
+  const result = await chrome.storage.local.get(['usageStats', 'totalFocusedTime']);
   const stats = result.usageStats || {};
+  const totalFocusedTime = result.totalFocusedTime || 0;
   
   const today = new Date().toDateString();
   const todayStats = stats[today] || {};
@@ -266,21 +359,18 @@ async function renderStats() {
   if (entries.length === 0) {
     statsList.innerHTML = '';
     statsList.appendChild(emptyStats);
-    if (donutChart) {
-      donutChart.destroy();
-      donutChart = null;
-    }
+    clearDonutChart();
     return;
   }
   
-  // Calculate total time
+  // Calculate total time for today
   const totalSeconds = entries.reduce((sum, [_, seconds]) => sum + seconds, 0);
   
   // Sort by time
   entries.sort((a, b) => b[1] - a[1]);
   
-  // Render donut chart
-  renderDonutChart(entries.slice(0, 5), totalSeconds);
+  // Render SVG donut chart
+  renderSVGDonutChart(entries.slice(0, 5), totalSeconds);
   
   // Render list
   statsList.innerHTML = '';
@@ -302,88 +392,96 @@ async function renderStats() {
   });
 }
 
-function renderDonutChart(data, totalSeconds) {
-  const canvas = document.getElementById('donut-chart');
-  const ctx = canvas.getContext('2d');
+// SVG Donut Chart Renderer
+function renderSVGDonutChart(data, totalSeconds) {
+  const svg = document.getElementById('donut-chart');
+  const segmentsGroup = document.getElementById('donut-segments');
+  const totalTimeValue = document.getElementById('total-time-value');
+  const totalTimeLabel = document.getElementById('total-time-label');
   
-  if (donutChart) {
-    donutChart.destroy();
-  }
+  // Clear previous segments
+  segmentsGroup.innerHTML = '';
   
-  const labels = data.map(([url]) => url);
-  const values = data.map(([_, seconds]) => seconds);
-  const colors = [
-    '#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'
-  ];
+  // Update center text
+  totalTimeValue.textContent = formatTime(totalSeconds);
+  totalTimeLabel.textContent = 'Total Time';
   
-  donutChart = new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-      labels: labels,
-      datasets: [{
-        data: values,
-        backgroundColor: colors,
-        borderWidth: 0
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      cutout: '70%',
-      plugins: {
-        legend: {
-          display: false
-        },
-        tooltip: {
-          callbacks: {
-            label: function(context) {
-              return context.label + ': ' + formatTime(context.parsed);
-            }
-          }
-        }
-      }
-    },
-    plugins: [{
-      id: 'centerText',
-      beforeDraw: function(chart) {
-        const width = chart.width;
-        const height = chart.height;
-        const ctx = chart.ctx;
-        ctx.restore();
-        
-        const totalTime = formatTime(totalSeconds);
-        const fontSize = 28;
-        const labelFontSize = 12;
-        
-        ctx.font = `bold ${fontSize}px -apple-system, sans-serif`;
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = '#1e293b';
-        
-        const text = totalTime;
-        const textX = Math.round((width - ctx.measureText(text).width) / 2);
-        const textY = height / 2 - 8;
-        
-        ctx.fillText(text, textX, textY);
-        
-        ctx.font = `600 ${labelFontSize}px -apple-system, sans-serif`;
-        ctx.fillStyle = '#64748b';
-        const label = 'Total Time';
-        const labelX = Math.round((width - ctx.measureText(label).width) / 2);
-        const labelY = height / 2 + 18;
-        
-        ctx.fillText(label, labelX, labelY);
-        ctx.save();
-      }
-    }]
+  if (data.length === 0) return;
+  
+  // Chart properties
+  const centerX = 140;
+  const centerY = 140;
+  const radius = 100;
+  const strokeWidth = 35;
+  const colors = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'];
+  
+  let currentAngle = -90; // Start from top
+  
+  data.forEach(([url, seconds], index) => {
+    const percentage = seconds / totalSeconds;
+    const angleSize = percentage * 360;
+    
+    const startAngle = currentAngle;
+    const endAngle = currentAngle + angleSize;
+    
+    const path = describeArc(centerX, centerY, radius, startAngle, endAngle);
+    
+    const pathElement = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    pathElement.setAttribute('d', path);
+    pathElement.setAttribute('fill', 'none');
+    pathElement.setAttribute('stroke', colors[index % colors.length]);
+    pathElement.setAttribute('stroke-width', strokeWidth);
+    pathElement.setAttribute('class', 'donut-segment');
+    
+    // Add tooltip
+    const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+    title.textContent = `${url}: ${formatTime(seconds)}`;
+    pathElement.appendChild(title);
+    
+    segmentsGroup.appendChild(pathElement);
+    
+    currentAngle = endAngle;
   });
+}
+
+// Helper function to create SVG arc path
+function describeArc(x, y, radius, startAngle, endAngle) {
+  const start = polarToCartesian(x, y, radius, endAngle);
+  const end = polarToCartesian(x, y, radius, startAngle);
+  const largeArcFlag = endAngle - startAngle <= 180 ? '0' : '1';
+  
+  return [
+    'M', start.x, start.y,
+    'A', radius, radius, 0, largeArcFlag, 0, end.x, end.y
+  ].join(' ');
+}
+
+function polarToCartesian(centerX, centerY, radius, angleInDegrees) {
+  const angleInRadians = (angleInDegrees - 90) * Math.PI / 180.0;
+  return {
+    x: centerX + (radius * Math.cos(angleInRadians)),
+    y: centerY + (radius * Math.sin(angleInRadians))
+  };
+}
+
+function clearDonutChart() {
+  const segmentsGroup = document.getElementById('donut-segments');
+  const totalTimeValue = document.getElementById('total-time-value');
+  
+  segmentsGroup.innerHTML = '';
+  totalTimeValue.textContent = '0h 0m';
 }
 
 function formatTime(seconds) {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
   
   if (hours > 0) {
     return `${hours}h ${minutes}m`;
   }
-  return `${minutes}m`;
+  if (minutes > 0) {
+    return `${minutes}m ${secs}s`;
+  }
+  return `${secs}s`;
 }

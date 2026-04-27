@@ -1,0 +1,16 @@
+{
+  "name": "focusflow-extension",
+  "version": "3.0.0",
+  "description": "FocusFlow Chrome Extension with Firebase real-time sync",
+  "type": "module",
+  "scripts": {
+    "build": "node build.js",
+    "watch": "node build.js --watch"
+  },
+  "dependencies": {
+    "firebase": "^10.7.2"
+  },
+  "devDependencies": {
+    "esbuild": "^0.19.11"
+  }
+}
